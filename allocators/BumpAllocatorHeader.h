@@ -4,9 +4,9 @@
 
 #include "BumpAllocatorBase.h"
 
-class NaiveBumpAllocator final : public BumpAllocatorBase {
+class BumpAllocatorHeader final : public BumpAllocatorBase {
 public:
-    ~NaiveBumpAllocator() override { reset(); }
+    ~BumpAllocatorHeader() override { reset(); }
 
 protected:
     void _alloc_new_block(size_t size, size_t alignment) override {

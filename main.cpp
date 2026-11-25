@@ -105,12 +105,12 @@ namespace {
 
 int main() {
     {
-        NaiveBumpAllocator allocator;
+        BumpAllocatorHeader allocator;
         TestBumpAllocator(allocator);
     }
     std::cout << std::endl;
     {
-        BumpAllocator allocator;
+        BumpAllocatorFooter allocator;
         TestBumpAllocator(allocator);
     }
 

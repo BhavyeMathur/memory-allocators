@@ -1,4 +1,4 @@
 #pragma once
 
-#include "NaiveBumpAllocator.h"
-#include "BumpAllocator.h"
+#include "BumpAllocatorHeader.h"
+#include "BumpAllocatorFooter.h"

@@ -179,11 +179,11 @@ int main(int argc, char **argv) {
     BumpAllocatorBase *allocator;
     switch (std::stoi(argv[2])) {
         case 1:
-            allocator = new NaiveBumpAllocator();
+            allocator = new BumpAllocatorHeader();
             break;
 
         case 2:
-            allocator = new BumpAllocator();
+            allocator = new BumpAllocatorFooter();
             break;
 
         default:
