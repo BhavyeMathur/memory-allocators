@@ -80,7 +80,7 @@ namespace {
             try {
                 allocator.alloc(SIZE_MAX);
                 assert(false);
-            } catch (std::bad_alloc &) {
+            } catch (std::invalid_argument &) {
             }
 
             std::cout << "Edge case tests passed" << std::endl;
