@@ -3,6 +3,9 @@
 #include <iomanip>
 #include <vector>
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
 #include <sys/mman.h>
 
 using Clock = std::chrono::steady_clock;
@@ -50,7 +53,7 @@ namespace bench {
 
 struct Workload {
     struct Request {
-        size_t size; // used by Alloc, Calloc
+        size_t size; // used by Alloc, Calloc, Touch
         size_t alignment; // used by Alloc, Calloc
 
         size_t ptr_index; // used by Free, Touch
@@ -61,6 +64,37 @@ struct Workload {
 
     std::vector<Request> requests;
 };
+
+Workload read_workload(const std::string &path) {
+    std::ifstream file(path);
+    if (!file)
+        throw std::runtime_error("could not open workload: " + path);
+
+    std::string line, type;
+    std::getline(file, line); // type,size,alignment,ptr_index,offset
+
+    Workload workload;
+    while (std::getline(file, line)) {
+        if (line.empty())
+            continue;
+        std::ranges::replace(line, ',', ' ');
+        std::istringstream row(line);
+
+        Workload::Request request{};
+        if (!(row >> type >> request.size >> request.alignment >> request.ptr_index >> request.offset))
+            throw std::runtime_error("invalid workload row: " + line);
+
+        if (type == "alloc") request.type = Workload::Request::Type::Alloc;
+        else if (type == "calloc") request.type = Workload::Request::Type::Calloc;
+        else if (type == "reset") request.type = Workload::Request::Type::Reset;
+        else if (type == "free") request.type = Workload::Request::Type::Free;
+        else if (type == "touch") request.type = Workload::Request::Type::Touch;
+        else throw std::runtime_error("unknown request type: " + type);
+
+        workload.requests.push_back(request);
+    }
+    return workload;
+}
 
 void print_results(const std::vector<uint64_t> &latency_vs_step, const std::vector<Counters> &counters_vs_step) {
     auto print_row = [](const auto &sample, const auto &latency,
@@ -100,9 +134,7 @@ void run(BumpAllocatorBase &allocator, Workload &workload) {
     for (auto [size, alignment, ptr_index, offset, type]: workload.requests) {
         void *ptr = nullptr;
 
-        std::chrono::time_point<Clock> start, end;
-        if (type != Workload::Request::Type::Touch)
-            start = Clock::now();
+        auto start = Clock::now();
         switch (type) {
             case Workload::Request::Type::Alloc:
                 ptr = allocator.alloc(size, alignment);
@@ -120,17 +152,17 @@ void run(BumpAllocatorBase &allocator, Workload &workload) {
                 allocator.free(ptrs[ptr_index]);
                 break;
 
-            case Workload::Request::Type::Touch:
-                static_cast<volatile uint8_t *>(ptrs[ptr_index])[offset] = 0;
+            case Workload::Request::Type::Touch: {
+                auto *arr = &static_cast<volatile uint8_t *>(ptrs[ptr_index])[offset];
+                for (size_t i = 0; i < size; i++)
+                    arr[i] = 0;
                 break;
+            }
         }
-        if (type != Workload::Request::Type::Touch)
-            end = Clock::now();
+        auto end = Clock::now();
 
         if (ptr)
             ptrs.push_back(ptr);
-        if (type == Workload::Request::Type::Touch)
-            continue;
         latency_vs_step.push_back(ns(end - start));
         counters_vs_step.push_back(counters);
     }
@@ -138,18 +170,26 @@ void run(BumpAllocatorBase &allocator, Workload &workload) {
     print_results(latency_vs_step, counters_vs_step);
 }
 
-int main() {
-    Workload workload = {
-        {
-            Workload::Request(1024, 8, 0, 0, Workload::Request::Type::Alloc),
-            Workload::Request(1024, 8, 0, 0, Workload::Request::Type::Alloc),
-            Workload::Request(1024, 8, 0, 0, Workload::Request::Type::Alloc),
-            Workload::Request(1024, 8, 0, 0, Workload::Request::Type::Alloc),
-        }
-    };
+int main(int argc, char **argv) {
+    if (argc != 3)
+        throw std::invalid_argument("invalid number of arguments");
 
-    BumpAllocator allocator;
+    auto workload = read_workload(BENCHMARK_WORKLOAD_DIR + std::string(argv[1]));
 
-    run(allocator, workload);
-    return 0;
+    BumpAllocatorBase *allocator;
+    switch (std::stoi(argv[2])) {
+        case 1:
+            allocator = new NaiveBumpAllocator();
+            break;
+
+        case 2:
+            allocator = new BumpAllocator();
+            break;
+
+        default:
+            throw std::invalid_argument("invalid allocator type");
+    }
+
+    run(*allocator, workload);
+    delete allocator;
 }

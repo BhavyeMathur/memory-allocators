@@ -8,3 +8,5 @@ add_executable(memory_allocator main.cpp
 
 add_executable(allocator_bench benchmarks/benchmark.cpp)
 target_include_directories(allocator_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(allocator_bench PRIVATE
+        BENCHMARK_WORKLOAD_DIR="${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/workloads")
