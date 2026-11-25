@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <unistd.h>
 
 inline size_t ceil_div(size_t a, size_t b) {

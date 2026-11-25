@@ -21,8 +21,8 @@ protected:
         m_cur_block = reinterpret_cast<BlockHeader *>(new_header);
     }
 
-    void *block_start_from_header(BlockHeader &header) override {
-        return reinterpret_cast<std::byte *>(m_cur_block) - m_cur_block->block_size + sizeof(BlockHeader);
+    void *_block_start_from_header(BlockHeader &header) override {
+        return reinterpret_cast<std::byte *>(m_cur_block) + sizeof(BlockHeader) - m_cur_block->block_size;
     }
 
 private:

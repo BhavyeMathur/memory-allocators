@@ -20,7 +20,7 @@ protected:
         m_cur_block = static_cast<BlockHeader *>(ptr);
     }
 
-    void *block_start_from_header(BlockHeader &header) override {
+    void *_block_start_from_header(BlockHeader &header) override {
         return &header;
     }
 

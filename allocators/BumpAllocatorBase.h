@@ -39,14 +39,11 @@ public:
         return ptr;
     }
 
-    static void free(void *) {
-    }
-
     void reset() {
         while (m_cur_block != nullptr) {
             auto prev_block = m_cur_block->prev_block;
 
-            auto block_start = block_start_from_header(*m_cur_block);
+            auto block_start = _block_start_from_header(*m_cur_block);
             if (munmap(block_start, m_cur_block->block_size))
                 throw std::runtime_error("failed to unmap memory block");
             m_cur_block = prev_block;
@@ -54,6 +51,9 @@ public:
 
         m_cursor = nullptr;
         m_unused_bytes = 0;
+    }
+
+    static void free(void *) {
     }
 
 protected:
@@ -81,7 +81,7 @@ protected:
         return result;
     }
 
-    virtual void *block_start_from_header(BlockHeader &header) = 0;
+    virtual void *_block_start_from_header(BlockHeader &header) = 0;
 
     static void *_mmap(size_t bytes) {
         auto ptr = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, 0, 0);
